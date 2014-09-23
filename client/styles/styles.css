@@ -82,3 +82,16 @@ form input[type=text] {
 .spinner img {
     padding: 10px;
 }
+
+.roomName {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.username {
+    cursor: pointer;
+}
+
+.friend {
+    color: pink;
+}
