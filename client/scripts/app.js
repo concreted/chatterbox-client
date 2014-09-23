@@ -109,7 +109,7 @@ $(document).ready(function() {
     window.room = $(this).text();
   });
 
-  //app.init();
+  app.init();
 });
 
 
