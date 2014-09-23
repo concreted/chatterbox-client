@@ -73,33 +73,39 @@ var ChatRoom = Backbone.Collection.extend({
 var ChatRoomView = Backbone.View.extend({
   tagName: 'ul',
   initialize: function() {
-    this.listenTo(this.collection, 'reset', this.render);
+    //this.listenTo(this.collection, 'reset', this.render);
+    this.collection.on('reset', this.render, this);
   },
 
   render: function() {
     console.log('rendering chatroom');
     //$('#chats').empty();
+    this.$el.empty();
     this.collection.each(function(message){
+        //console.log(this);
         var messageView = new MessageView({ model: message });
+        //console.log(messageView.render());
         this.$el.append(messageView.render()); // adding all the person objects.
-    }, this);
 
-    return this.$el;
+    }, this);
+    //console.log(this);
+    //$('#chats').append("<div>");
+    return this.$el.html();
   }
 });
 
 var app = {};
-app.chatroom = new ChatRoom('lobby');
-app.view = new ChatRoomView({collection: app.chatroom});
+
 
 $(document).ready(function() {
   // var m = new Message('a', 'hello', 'lobby');
   // var mv = new MessageView({model: m});
   // var cr = new ChatRoom();
   // cr.url = '/lobby';
-
-  $('#chats').append(app.view.render());
-
+  app.chatroom = new ChatRoom('lobby');
+  app.view = new ChatRoomView({ el: $('#chats'), collection: app.chatroom });
+  //$('#chats').append(app.view.render());
+  setInterval(function() {app.chatroom.fetch()}, 1000);
   // $('#chats').append([
   //   mv.render()
   // ]);
