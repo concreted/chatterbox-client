@@ -13,7 +13,6 @@ var MessageView = Backbone.View.extend({
     this.model.on('change:isFriend', function() {
       this.render();
     }, this);
-    //this.render();
   },
 
   render: function() {
@@ -29,10 +28,13 @@ var ChatRoom = Backbone.Collection.extend({
   url: '',
   initialize: function(room){
     //fetch messages from server for the room
+    this.room = room;
     this.fetch(room);
+
+    app.chatroomStore[room] = this;
   },
 
-  fetch: function(room) {
+  fetch: function() {
     $.ajax({
       // always use this url
       url: 'https://api.parse.com/1/classes/chatterbox',
@@ -43,14 +45,10 @@ var ChatRoom = Backbone.Collection.extend({
         limit: 50,
         order: '-createdAt',
         where: {
-          roomname : room
+          roomname : this.room
         }
       },
       success: (function (data) {
-        console.log(data);
-        // console.log('chatterbox: Message fetched');
-        console.log(this);
-
         var newMessages = [];
         for (var i = 0; i < data['results'].length; i++) {
           var message = data['results'][i];
@@ -67,48 +65,92 @@ var ChatRoom = Backbone.Collection.extend({
         console.error('chatterbox: Failed to fetch message');
       }
     });
+  },
+  send: function(message){
+    $.ajax({
+      // always use this url
+      url: 'https://api.parse.com/1/classes/chatterbox',
+      type: 'POST',
+      data: JSON.stringify(message),
+      contentType: 'application/json',
+      success: function (data) {
+        console.log('chatterbox: Message sent');
+      },
+      error: function (data) {
+        // see: https://developer.mozilla.org/en-US/docs/Web/API/console.error
+        console.error('chatterbox: Failed to send message');
+      }
+    });
+  },
+  handleSubmit: function(message) {
+    console.log('Submit', message);
+    var user = window.location.search.slice(10);
+
+    var messageObject = {
+      username: user,
+      text: message,
+      roomname: this.room || 'lobby'
+    };
+
+    console.log(messageObject);
+
+    this.send(messageObject);
   }
 });
 
 var ChatRoomView = Backbone.View.extend({
   tagName: 'ul',
   initialize: function() {
-    //this.listenTo(this.collection, 'reset', this.render);
     this.collection.on('reset', this.render, this);
+    var roomDiv = '<span class="roomName">' + this.collection.room + '</span>';
+    $('#roomSelect').append(roomDiv);
+    app.chatroom = this.collection;
   },
 
   render: function() {
-    console.log('rendering chatroom');
-    //$('#chats').empty();
     this.$el.empty();
     this.collection.each(function(message){
-        //console.log(this);
         var messageView = new MessageView({ model: message });
-        //console.log(messageView.render());
         this.$el.append(messageView.render()); // adding all the person objects.
 
     }, this);
-    //console.log(this);
-    //$('#chats').append("<div>");
+
     return this.$el.html();
   }
 });
 
-var app = {};
 
+var App = Backbone.Model.extend({
+  initialize: function() {
+    this.chatroomStore = {};
+    this.selectRoom = function(room) {
+      app.chatroom = app.chatroomStore[room];
+      app.chatroom.fetch();
+    }
+  }
+});
+
+var app = new App();
 
 $(document).ready(function() {
-  // var m = new Message('a', 'hello', 'lobby');
-  // var mv = new MessageView({model: m});
-  // var cr = new ChatRoom();
-  // cr.url = '/lobby';
+  $('#send .submit').click(function(event) {
+    app.chatroom.handleSubmit($('.chatbox').val());
+  });
+  $('#chooseRoom .submit').click(function(event) {
+    var room = $('.roombox').val();
+    if (!app.chatroomStore.hasOwnProperty(room)) {
+      var newChatroom = new ChatRoom(room);
+      var newView = new ChatRoomView({ el: $('#chats'), collection: newChatroom}, room);
+    }
+  });
+  $("#roomSelect").on('click', '.roomName', function() {
+    var room = $(this).text();
+    app.selectRoom(room);
+  });
+
   app.chatroom = new ChatRoom('lobby');
   app.view = new ChatRoomView({ el: $('#chats'), collection: app.chatroom });
-  //$('#chats').append(app.view.render());
+  app.chatroomStore['lobby'] = app.chatroom;
   setInterval(function() {app.chatroom.fetch()}, 1000);
-  // $('#chats').append([
-  //   mv.render()
-  // ]);
-
 });
 
